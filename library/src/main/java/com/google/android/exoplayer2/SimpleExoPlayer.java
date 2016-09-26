@@ -263,28 +263,6 @@ public final class SimpleExoPlayer implements ExoPlayer {
   }
 
   /**
-   * Sets the audio volume for each audio track of 4 audio tracks (8 Ball), with 0 being silence and 1 being unity gain.
-   *
-   * @param volume The master volume.
-   * @param volumes The sub volume array
-   */
-  public void set8BallVolume(float volume, float[] volumes) {
-    if(volumes.length != 4)
-      return;
-
-    this.volume = volume;
-    ExoPlayerMessage[] messages = new ExoPlayerMessage[audioRendererCount];
-    int count = 0;
-    for (Renderer renderer : renderers) {
-      if (renderer.getTrackType() == C.TRACK_TYPE_AUDIO) {
-        messages[count] = new ExoPlayerMessage(renderer, C.MSG_SET_VOLUME, volume * volumes[count]);
-        count++;
-      }
-    }
-    player.sendMessages(messages);
-  }
-
-  /**
    * Returns the audio volume, with 0 being silence and 1 being unity gain.
    */
   public float getVolume() {
@@ -539,26 +517,10 @@ public final class SimpleExoPlayer implements ExoPlayer {
         MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY);
     renderersList.add(videoRenderer);
 
-    //Instanciate
-    Renderer audioRendererFront = new MediaCodecAudioRenderer(MediaCodecSelector.DEFAULT,
-            drmSessionManager, true, mainHandler, componentListener,
-            AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
-    renderersList.add(audioRendererFront);
-
-    Renderer audioRendererRight = new MediaCodecAudioRenderer(MediaCodecSelector.DEFAULT,
-            drmSessionManager, true, mainHandler, componentListener,
-            AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
-    renderersList.add(audioRendererRight);
-
-    Renderer audioRendererBack = new MediaCodecAudioRenderer(MediaCodecSelector.DEFAULT,
-            drmSessionManager, true, mainHandler, componentListener,
-            AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
-    renderersList.add(audioRendererBack);
-
-    Renderer audioRendererLeft = new MediaCodecAudioRenderer(MediaCodecSelector.DEFAULT,
-            drmSessionManager, true, mainHandler, componentListener,
-            AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
-    renderersList.add(audioRendererLeft);
+    Renderer audioRenderer = new MediaCodecAudioRenderer(MediaCodecSelector.DEFAULT,
+        drmSessionManager, true, mainHandler, componentListener,
+        AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
+    renderersList.add(audioRenderer);
 
     Renderer textRenderer = new TextRenderer(componentListener, mainHandler.getLooper());
     renderersList.add(textRenderer);

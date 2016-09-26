@@ -16,19 +16,12 @@
 package com.google.android.exoplayer2.demo;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -79,8 +72,6 @@ import java.net.CookiePolicy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static com.google.android.exoplayer2.ExoPlayer.STATE_READY;
 
 /**
  * An activity that plays media using {@link SimpleExoPlayer}.
@@ -152,10 +143,6 @@ public class PlayerActivity extends Activity implements OnClickListener, ExoPlay
     simpleExoPlayerView = (SimpleExoPlayerView) findViewById(R.id.player_view);
     simpleExoPlayerView.setControllerVisibilityListener(this);
     simpleExoPlayerView.requestFocus();
-
-    //VR Sensors Related (Hear360)
-    mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-    mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR), SensorManager.SENSOR_DELAY_NORMAL);
   }
 
   @Override
@@ -176,10 +163,6 @@ public class PlayerActivity extends Activity implements OnClickListener, ExoPlay
   @Override
   public void onResume() {
     super.onResume();
-
-    //VR Sensors Related (Hear360)
-    mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR), SensorManager.SENSOR_DELAY_NORMAL);
-
     if ((Util.SDK_INT <= 23 || player == null)) {
       initializePlayer();
     }
@@ -187,7 +170,6 @@ public class PlayerActivity extends Activity implements OnClickListener, ExoPlay
 
   @Override
   public void onPause() {
-    mSensorManager.unregisterListener(mSensorListener);
     super.onPause();
     if (Util.SDK_INT <= 23) {
       releasePlayer();
@@ -536,118 +518,4 @@ public class PlayerActivity extends Activity implements OnClickListener, ExoPlay
     Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
   }
 
-  //VR Sensors Related (Hear360)
-
-  private SensorManager mSensorManager;
-  private double initialAzimuth = 0;
-  private double currentAzimuth = 0;
-
-  SensorEventListener mSensorListener = new SensorEventListener() {
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-      float rotationMatrix[];
-      switch(event.sensor.getType())
-      {
-        case Sensor.TYPE_GAME_ROTATION_VECTOR:
-          rotationMatrix=new float[16];
-          mSensorManager.getRotationMatrixFromVector(rotationMatrix,event.values);
-          double azimuth = getAzimuth(rotationMatrix);
-
-          if(initialAzimuth == 0)
-          {
-            initialAzimuth = azimuth;
-          }
-          else
-          {
-            double relativeAzimuth = azimuth - initialAzimuth;
-            //Log.i("PlayerActivity", "relativeAzimuth:" + Math.toDegrees(relativeAzimuth));
-            if(relativeAzimuth > Math.PI)
-            {
-              currentAzimuth = relativeAzimuth - Math.PI * 2;
-            }
-            else if(relativeAzimuth < -Math.PI)
-            {
-              currentAzimuth = relativeAzimuth + Math.PI * 2;
-            }
-            else
-            {
-              currentAzimuth = relativeAzimuth;
-            }
-            //Log.i("PlayerActivity", "currentAzimuth:" + Math.toDegrees(currentAzimuth));
-
-            if(player != null && player.getPlaybackState() == STATE_READY && trackSelector != null)
-            {
-              TrackInfo trackInfo = trackSelector.getTrackInfo();
-              if (trackInfo != null) {
-                int rendererCount = trackInfo.rendererCount;
-                if(rendererCount != 5)
-                {
-                  update8BallVolumes(currentAzimuth);
-                }
-              }
-            }
-          }
-          break;
-      }
-    }
-
-    private double getAzimuth(float[] rotationMatrix)
-    {
-      float[] orientationValues = new float[3];
-      SensorManager.getOrientation(rotationMatrix, orientationValues);
-      double azimuth = orientationValues[0];
-
-      //Log.i("PlayerActivity", "azimuth:" + Math.toDegrees(azimuth));
-
-      return azimuth;
-    }
-
-    private void update8BallVolumes(double azimuth)
-    {
-      double frontVol = 0;
-      double leftVol = 0;
-      double backVol = 0;
-      double rightVol = 0;
-
-      if (azimuth <= Math.PI / 2 && azimuth >= 0)
-      {
-        frontVol = Math.cos (azimuth);
-        rightVol = Math.sin (azimuth);
-        backVol = 0;
-        leftVol = 0;
-      }
-      else if (azimuth > Math.PI / 2 && azimuth <= Math.PI)
-      {
-        frontVol = 0;
-        rightVol = Math.cos (azimuth - Math.PI / 2);
-        backVol = Math.sin (azimuth - Math.PI / 2);
-        leftVol = 0;
-      }
-      else if (azimuth < -Math.PI /2 && azimuth >= -Math.PI)
-      {
-        frontVol = 0;
-        rightVol = 0;
-        backVol = Math.sin (-azimuth - Math.PI / 2);
-        leftVol = Math.cos (-azimuth - Math.PI / 2);
-      }
-      else if (azimuth < 0 && azimuth >= -Math.PI / 2)
-      {
-        frontVol = Math.cos (-azimuth);
-        rightVol = 0;
-        backVol = 0;
-        leftVol = Math.sin (-azimuth);
-      }
-
-      float[] volumes = new float[] {(float)frontVol, (float)rightVol, (float)backVol, (float)leftVol};
-      player.set8BallVolume(1.0f, volumes);
-
-      Log.i("PlayerActivity", "azimuth:" + Math.toDegrees(azimuth) + ", front:" + frontVol + ", right:" + rightVol + ", backVol:" + backVol + ", leftVol:" + leftVol);
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-      // TODO Auto-generated method stub
-
-    }
-  };
 }
