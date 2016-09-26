@@ -297,18 +297,36 @@ public abstract class MappingTrackSelector extends TrackSelector {
 
     // Associate each track group to a preferred renderer, and evaluate the support that the
     // renderer provides for each track in the group.
-    for (int groupIndex = 0; groupIndex < trackGroups.length; groupIndex++) {
-      TrackGroup group = trackGroups.get(groupIndex);
-      // Associate the group to a preferred renderer.
-      int rendererIndex = findRenderer(rendererCapabilities, group);
-      // Evaluate the support that the renderer provides for each track in the group.
-      int[] rendererFormatSupport = rendererIndex == rendererCapabilities.length
-          ? new int[group.length] : getFormatSupport(rendererCapabilities[rendererIndex], group);
-      // Stash the results.
-      int rendererTrackGroupCount = rendererTrackGroupCounts[rendererIndex];
-      rendererTrackGroups[rendererIndex][rendererTrackGroupCount] = group;
-      rendererFormatSupports[rendererIndex][rendererTrackGroupCount] = rendererFormatSupport;
-      rendererTrackGroupCounts[rendererIndex]++;
+    if(trackGroups.length == 5) //Hard coded 8 Ball scenario (Hear360)
+    {
+      for (int groupIndex = 0; groupIndex < trackGroups.length; groupIndex++) {
+        TrackGroup group = trackGroups.get(groupIndex);
+        // Associate the group to a preferred renderer.
+        int rendererIndex = groupIndex; //1st is the video track, and the rest 4 are audio tracks
+        // Evaluate the support that the renderer provides for each track in the group.
+        int[] rendererFormatSupport = rendererIndex == rendererCapabilities.length
+                ? new int[group.length] : getFormatSupport(rendererCapabilities[rendererIndex], group);
+        // Stash the results.
+        int rendererTrackGroupCount = rendererTrackGroupCounts[rendererIndex];
+        rendererTrackGroups[rendererIndex][rendererTrackGroupCount] = group;
+        rendererFormatSupports[rendererIndex][rendererTrackGroupCount] = rendererFormatSupport;
+        rendererTrackGroupCounts[rendererIndex]++;
+      }
+    }
+    else {
+      for (int groupIndex = 0; groupIndex < trackGroups.length; groupIndex++) {
+        TrackGroup group = trackGroups.get(groupIndex);
+        // Associate the group to a preferred renderer.
+        int rendererIndex = findRenderer(rendererCapabilities, group);
+        // Evaluate the support that the renderer provides for each track in the group.
+        int[] rendererFormatSupport = rendererIndex == rendererCapabilities.length
+                ? new int[group.length] : getFormatSupport(rendererCapabilities[rendererIndex], group);
+        // Stash the results.
+        int rendererTrackGroupCount = rendererTrackGroupCounts[rendererIndex];
+        rendererTrackGroups[rendererIndex][rendererTrackGroupCount] = group;
+        rendererFormatSupports[rendererIndex][rendererTrackGroupCount] = rendererFormatSupport;
+        rendererTrackGroupCounts[rendererIndex]++;
+      }
     }
 
     // Create a track group array for each renderer, and trim each rendererFormatSupports entry.
