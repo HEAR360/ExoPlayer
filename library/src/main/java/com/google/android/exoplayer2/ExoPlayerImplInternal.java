@@ -1154,10 +1154,13 @@ import java.io.IOException;
               joining, playingPeriodHolder.rendererPositionOffsetUs);
           MediaClock mediaClock = renderer.getMediaClock();
           if (mediaClock != null) {
+            //Comment out this exception to be able to have multiple audio renderers (Hear360)
+            /*
             if (rendererMediaClock != null) {
               throw ExoPlaybackException.createForUnexpected(
                   new IllegalStateException("Multiple renderer media clocks enabled."));
             }
+            */
             rendererMediaClock = mediaClock;
             rendererMediaClockSource = renderer;
           }
