@@ -18,6 +18,7 @@ package com.google.android.exoplayer2.demo;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -63,9 +65,21 @@ public class SampleChooserActivity extends Activity {
     if (dataUri != null) {
       uris = new String[] {dataUri};
     } else {
-      uris = new String[] {
-          "asset:///media.exolist.json",
-      };
+      ArrayList<String> uriList = new ArrayList<>();
+      AssetManager assetManager = getAssets();
+      try {
+        for (String asset : assetManager.list("")) {
+          if (asset.endsWith(".exolist.json")) {
+            uriList.add("asset:///" + asset);
+          }
+        }
+      } catch (IOException e) {
+        Toast.makeText(getApplicationContext(), R.string.sample_list_load_error, Toast.LENGTH_LONG)
+            .show();
+      }
+      uris = new String[uriList.size()];
+      uriList.toArray(uris);
+      Arrays.sort(uris);
     }
     SampleListLoader loaderTask = new SampleListLoader();
     loaderTask.execute(uris);
@@ -170,6 +184,7 @@ public class SampleChooserActivity extends Activity {
       String[] drmKeyRequestProperties = null;
       boolean preferExtensionDecoders = false;
       ArrayList<UriSample> playlistSamples = null;
+      String adTagUri = null;
 
       reader.beginObject();
       while (reader.hasNext()) {
@@ -219,6 +234,9 @@ public class SampleChooserActivity extends Activity {
             }
             reader.endArray();
             break;
+          case "ad_tag_uri":
+            adTagUri = reader.nextString();
+            break;
           default:
             throw new ParserException("Unsupported attribute name: " + name);
         }
@@ -232,7 +250,7 @@ public class SampleChooserActivity extends Activity {
             preferExtensionDecoders, playlistSamplesArray);
       } else {
         return new UriSample(sampleName, drmUuid, drmLicenseUrl, drmKeyRequestProperties,
-            preferExtensionDecoders, uri, extension);
+            preferExtensionDecoders, uri, extension, adTagUri);
       }
     }
 
@@ -248,11 +266,13 @@ public class SampleChooserActivity extends Activity {
     }
 
     private UUID getDrmUuid(String typeString) throws ParserException {
-      switch (typeString.toLowerCase()) {
+      switch (Util.toLowerInvariant(typeString)) {
         case "widevine":
           return C.WIDEVINE_UUID;
         case "playready":
           return C.PLAYREADY_UUID;
+        case "cenc":
+          return C.CLEARKEY_UUID;
         default:
           try {
             return UUID.fromString(typeString);
@@ -386,13 +406,15 @@ public class SampleChooserActivity extends Activity {
 
     public final String uri;
     public final String extension;
+    public final String adTagUri;
 
     public UriSample(String name, UUID drmSchemeUuid, String drmLicenseUrl,
         String[] drmKeyRequestProperties, boolean preferExtensionDecoders, String uri,
-        String extension) {
+        String extension, String adTagUri) {
       super(name, drmSchemeUuid, drmLicenseUrl, drmKeyRequestProperties, preferExtensionDecoders);
       this.uri = uri;
       this.extension = extension;
+      this.adTagUri = adTagUri;
     }
 
     @Override
@@ -400,6 +422,7 @@ public class SampleChooserActivity extends Activity {
       return super.buildIntent(context)
           .setData(Uri.parse(uri))
           .putExtra(PlayerActivity.EXTENSION_EXTRA, extension)
+          .putExtra(PlayerActivity.AD_TAG_URI_EXTRA, adTagUri)
           .setAction(PlayerActivity.ACTION_VIEW);
     }
 
